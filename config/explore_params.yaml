@@ -1,0 +1,26 @@
+# explore_lite settings for the TurtleBot3 simulation.
+# Values start from the explore_lite defaults (robo-friends/m-explore-ros2).
+# Change one value at a time and write down what changed.
+explore_node:
+  ros__parameters:
+    robot_base_frame: base_link
+    # Read the map straight from slam_toolbox.
+    costmap_topic: map
+    costmap_updates_topic: map_updates
+    # Drive back to the start pose when there is nothing left to explore.
+    return_to_init: true
+    # Show frontiers in RViz on /explore/frontiers (MarkerArray).
+    visualize: true
+    # How often (Hz) a new goal is chosen.
+    planner_frequency: 0.15
+    # Give up a goal after this many seconds without progress.
+    # Lower it if the robot gets stuck on one goal.
+    progress_timeout: 30.0
+    # Weights for choosing a frontier: distance, orientation, size.
+    potential_scale: 3.0
+    orientation_scale: 0.0
+    gain_scale: 1.0
+    transform_tolerance: 0.3
+    # Ignore frontiers smaller than this (metres).
+    # Raise it if the robot keeps chasing tiny gaps.
+    min_frontier_size: 0.75

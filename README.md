@@ -14,7 +14,8 @@ The intended behavior is to scan an unfamiliar room with LiDAR, navigate within 
 | Keyboard control | Hold-to-drive controller implemented and exercised in simulation |
 | Saved map and evaluation | Map saving provided; completed exploration and exported results pending |
 | Physical mecanum robot | Hardware, drivers, odometry, and interfaces awaiting inspection |
-| Navigation | Planned |
+| Autonomous exploration | slam_toolbox + Nav2 + explore_lite; full map of `turtlebot3_world` in about 1 simulated minute in a headless test; team runs pending |
+| Navigation | Nav2 used by exploration in simulation; physical robot pending |
 | Owner/stranger recognition and LEDs | Planned |
 
 The standard simulation uses differential drive. It does not validate the real robot's sideways motion or mecanum odometry.
@@ -65,20 +66,43 @@ bash scripts/run_ros_experiment.sh save
 
 Outputs go to `maps/first_room/`. The launcher refuses to overwrite an existing map. Generated maps, screenshots, and local observations are ignored by Git by default.
 
+### Autonomous exploration
+
+The robot can also explore and map the room by itself. Install once with `bash scripts/run_ros_experiment.sh setup-explore` (see the [exploration guide](docs/EXPLORATION.md)), then:
+
+```bash
+# Terminal A: Gazebo world
+bash scripts/run_ros_experiment.sh world
+```
+
+```bash
+# Terminal B: metrics recorder (start before exploration)
+bash scripts/run_ros_experiment.sh metrics --world turtlebot3_world
+```
+
+```bash
+# Terminal C: slam_toolbox, Nav2, RViz and explore_lite
+bash scripts/run_ros_experiment.sh explore
+```
+
+Save the map with `bash scripts/run_ros_experiment.sh save-explore`. Do not run Cartographer or the keyboard controller during exploration.
+
 ## Guides and code
 
 - [Simulation setup and checklist](docs/SIMULATION.md): installation, running, inspection, saving, shutdown, and common failures.
+- [Autonomous exploration guide](docs/EXPLORATION.md): install, run, pause, metrics, settings, and common failures.
 - [Physical robot checklist](docs/ROBOT.md): hardware inventory, SSH, ROS connectivity, supervised movement, and optional mapping.
 - [Hold-to-drive controller](scripts/game_teleop.py): keyboard press/release handling and stop commands.
 - [Simulation launcher](scripts/run_ros_experiment.sh): shared environment and commands.
+- [Exploration launch](launch/explore.launch.py), [settings](config/explore_params.yaml), and [metrics recorder](scripts/explore_metrics.py).
 
 The simulation launcher uses ROS domain 30, localhost-only discovery, and simulation time. Use the physical robot guide for hardware; these simulation settings are not a robot connection procedure.
 
 ## Project direction
 
 1. Verify physical base control, LiDAR, and odometry.
-2. Establish reliable mapping and navigation.
+2. Establish reliable mapping, navigation, and autonomous exploration.
 3. Add manageable owner/stranger recognition.
 4. Integrate a small state machine and LED expression.
 
-Advanced exploration, person following, and multi-person tracking are stretch goals. The first milestone is a working integrated demonstration.
+Person following and multi-person tracking are stretch goals. The first milestone is a working integrated demonstration.
