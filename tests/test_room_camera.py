@@ -1,4 +1,4 @@
-"""Calibration, optical-to-base transform and controller loss semantics."""
+"""Room camera calibration, image freshness and controller loss semantics."""
 
 from pathlib import Path
 import math
@@ -6,20 +6,18 @@ import sys
 from types import SimpleNamespace
 import unittest
 
-import numpy as np
-from geometry_msgs.msg import Point, PointStamped, TransformStamped
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Bool
 from rclpy.time import Time
 from sensor_msgs.msg import Image
-from tf2_geometry_msgs import do_transform_point
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from owner_follower import OwnerFollower
-from owner_tracker import OwnerTracker, camera_calibration
+from room_owner_tracker import RoomOwnerTracker
+from room_tracking import camera_calibration
 
 
-class OwnerTrackerTests(unittest.TestCase):
+class RoomCameraTests(unittest.TestCase):
     def info(self):
         info = CameraInfo(width=640, height=480, distortion_model="plumb_bob")
         info.k = [530., 0., 320., 0., 530., 240., 0., 0., 1.]
@@ -51,18 +49,6 @@ class OwnerTrackerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             camera_calibration(info)
 
-    def test_optical_axes_are_transformed_into_robot_axes(self):
-        transform = TransformStamped()
-        transform.header.frame_id = "base_footprint"
-        q = transform.transform.rotation
-        q.x, q.y, q.z, q.w = -0.5, 0.5, -0.5, 0.5
-        transform.transform.translation.x = 0.076
-        observation = PointStamped()
-        observation.point = Point(x=0.2, y=0.1, z=1.5)
-        point = do_transform_point(observation, transform).point
-        np.testing.assert_allclose((point.x, point.y, point.z),
-                                   (1.576, -0.2, -0.1), atol=1e-6)
-
     def test_owner_loss_clears_current_target_immediately(self):
         controller = SimpleNamespace(target=(2.0, 0.0))
         OwnerFollower.on_visibility(controller, Bool(data=False))
@@ -73,10 +59,13 @@ class OwnerTrackerTests(unittest.TestCase):
     def image_harness(self, clock_ns):
         clock = SimpleNamespace(now=lambda: Time(nanoseconds=clock_ns))
         reasons = []
+        cameras = {name: {"last_process": -math.inf, "stamp": -1, "info": None,
+                          "ambiguous": -math.inf} for name in ("left", "right")}
         return SimpleNamespace(
-            settings={"max_rate": 10., "max_image_age": 0.3},
-            last_process_time=-math.inf, last_stamp_ns=-1, last_clock_ns=None,
-            get_clock=lambda: clock, lost=reasons.append, info=None), reasons
+            settings={"max_rate": 10., "max_image_age": 0.3}, cameras=cameras,
+            last_clock=None, last_token=None, observations={"left": None, "right": None},
+            get_clock=lambda: clock,
+            reject=lambda camera, reason: reasons.append(reason)), reasons
 
     def image(self, seconds):
         image = Image()
@@ -85,27 +74,26 @@ class OwnerTrackerTests(unittest.TestCase):
 
     def test_stale_camera_images_are_rejected(self):
         harness, reasons = self.image_harness(2_000_000_000)
-        OwnerTracker.on_image(harness, self.image(1.0))
-        self.assertIn("timestamp", reasons[-1])
+        RoomOwnerTracker.on_image(harness, "left", self.image(1.0))
+        self.assertIn("stale", reasons[-1])
 
     def test_small_camera_lead_over_gazebo_clock_is_accepted(self):
         harness, reasons = self.image_harness(1_000_000_000)
-        OwnerTracker.on_image(harness, self.image(1.15))
+        RoomOwnerTracker.on_image(harness, "left", self.image(1.15))
         self.assertIn("calibration", reasons[-1])  # Passed timestamp validation.
 
     def test_duplicate_camera_image_is_rejected(self):
         harness, reasons = self.image_harness(1_000_000_000)
-        harness.last_stamp_ns = 1_000_000_000
-        OwnerTracker.on_image(harness, self.image(1.0))
+        harness.cameras["left"]["stamp"] = 1_000_000_000
+        RoomOwnerTracker.on_image(harness, "left", self.image(1.0))
         self.assertIn("duplicate", reasons[-1])
 
     def test_world_clock_reset_allows_fresh_images_to_resume(self):
         harness, reasons = self.image_harness(200_000_000)
-        harness.last_clock_ns, harness.last_stamp_ns = 5_000_000_000, 5_000_000_000
-        OwnerTracker.on_image(harness, self.image(0.2))
-        self.assertIn("clock reset", reasons[0])
+        harness.last_clock, harness.cameras["left"]["stamp"] = 5_000_000_000, 5_000_000_000
+        RoomOwnerTracker.on_image(harness, "left", self.image(0.2))
         self.assertIn("calibration", reasons[-1])
-        self.assertEqual(harness.last_stamp_ns, 200_000_000)
+        self.assertEqual(harness.cameras["left"]["stamp"], 200_000_000)
 
 
 if __name__ == "__main__":

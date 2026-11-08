@@ -4,20 +4,19 @@ import math
 from pathlib import Path
 import sys
 import unittest
-import xml.etree.ElementTree as ET
 
 import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from owner_marker import MarkerDetector, dictionary, marker_cells, marker_sdf, marker_svg
+from owner_marker import MarkerDetector, dictionary, marker_cells
 
 
 K = np.array([[530., 0, 320.], [0, 530., 240.], [0, 0, 1.]])
 
 
 def projected_marker(marker_id=23, translation=(0., 0., 1.5),
-                     rotation=(math.pi, 0., 0.), size=0.15):
+                     rotation=(math.pi, 0., 0.), size=0.30):
     half = size / 2
     points = np.array([[-half, half, 0], [half, half, 0],
                        [half, -half, 0], [-half, -half, 0]], np.float64)
@@ -33,7 +32,7 @@ def projected_marker(marker_id=23, translation=(0., 0., 1.5),
 
 class OwnerMarkerTests(unittest.TestCase):
     def setUp(self):
-        self.detector = MarkerDetector()
+        self.detector = MarkerDetector(23, 0.30)
 
     def detect(self, image):
         return self.detector.detect(image, K, np.zeros(5))
@@ -76,41 +75,23 @@ class OwnerMarkerTests(unittest.TestCase):
         self.assertIsNone(detection)
 
     def test_range_limit_is_enforced_after_detection(self):
-        detector = MarkerDetector(max_distance=1.0)
+        detector = MarkerDetector(23, 0.30, max_distance=1.0)
         detection, reason = detector.detect(projected_marker(), K, np.zeros(5))
         self.assertIsNone(detection)
         self.assertIn("range", reason)
 
-    def test_printable_marker_has_exact_physical_size_and_white_border(self):
-        cells = marker_cells()
+    def test_marker_cells_have_white_quiet_zone_and_black_border(self):
+        cells = marker_cells(23)
         self.assertTrue(np.all(cells[0] == 255))
         self.assertTrue(np.all(cells[:, 0] == 255))
         self.assertTrue(np.all(cells[1, 1:7] == 0))
-        root = ET.fromstring(marker_svg())
-        self.assertEqual(root.attrib["width"], "200mm")
-        self.assertEqual(root.attrib["height"], "200mm")
-
-    def test_gazebo_board_matches_the_printed_marker_cell_for_cell(self):
-        root = ET.fromstring(marker_sdf())
-        visuals = root.findall("model/link/visual")
-        self.assertEqual(len(visuals), 64)
-        cells = marker_cells()
-        for visual in visuals:
-            _, row, col = visual.attrib["name"].split("_")
-            row, col = int(row), int(col)
-            x, y, z, *_ = map(float, visual.findtext("pose").split())
-            self.assertEqual(x, 0)
-            self.assertAlmostEqual(y, (3.5 - col) * 0.025)
-            self.assertAlmostEqual(z, (3.5 - row) * 0.025)
-            expected = "1 1 1 1" if cells[row, col] else "0 0 0 1"
-            self.assertEqual(visual.findtext("material/emissive"), expected)
 
     def test_invalid_marker_configuration_fails(self):
         for marker_id in (-1, 50):
             with self.assertRaises(ValueError):
-                MarkerDetector(marker_id=marker_id)
+                MarkerDetector(marker_id=marker_id, marker_size=0.30)
         with self.assertRaises(ValueError):
-            MarkerDetector(marker_size=0)
+            MarkerDetector(marker_id=23, marker_size=0)
 
 
 if __name__ == "__main__":

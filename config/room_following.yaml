@@ -1,0 +1,20 @@
+room_owner_tracker:
+  ros__parameters:
+    use_sim_time: true
+    owner_id: 23
+    owner_size: 0.30
+    robot_id: 24
+    robot_size: 0.24
+    robot_marker_translation: [-0.064, 0.0, 0.32]
+    robot_marker_rpy: [0.0, 0.0, 0.0]
+    left_image_topic: /room_cameras/left/image_raw
+    left_info_topic: /room_cameras/left/camera_info
+    right_image_topic: /room_cameras/right/image_raw
+    right_info_topic: /room_cameras/right/camera_info
+    max_rate: 6.0
+    image_timeout: 0.6
+    max_image_age: 0.4
+    max_camera_skew: 0.2
+    max_disagreement: 0.35
+    min_edge_pixels: 10.0
+    max_reprojection_error: 2.5

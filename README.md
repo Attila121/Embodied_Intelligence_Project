@@ -23,7 +23,7 @@ The standard simulation uses differential drive. It does not validate the real r
 
 ## Directory layout
 
-Keep this repository focused on project source, configuration, guides, marker assets,
+Keep this repository focused on project source, configuration, guides,
 and tests. Third-party dependencies and active build outputs belong in the outer
 ROS workspace:
 
@@ -35,7 +35,7 @@ ROS workspace:
     turtlebot3_simulations/       # Official Humble simulation source
     m-explore-ros2/               # Exploration dependency (pinned by setup-explore)
     Embodied_Intelligence_Project/
-      assets/ config/ docs/ launch/ scripts/ tests/
+      config/ docs/ launch/ scripts/ tests/
       maps/                      # Local results, ignored by Git
 ```
 
@@ -112,88 +112,66 @@ bash scripts/run_ros_experiment.sh explore
 
 Save the map with `bash scripts/run_ros_experiment.sh save-explore`. Do not run Cartographer or the keyboard controller during exploration.
 
-### Owner following with a camera marker
+### Owner following with two fixed room cameras
 
-The robot identifies its owner using **ArUco DICT_4X4_50, marker ID 23**, with a
-**15 cm outer black square**. The camera measures the marker's position using its
-known size and camera calibration, and TF transforms that measurement into the
-robot frame. The controller maintains roughly **1.0–1.1 m** distance. A separate
-guard stops commands for obstacles, stale LiDAR, or a missing controller; losing
-the owner marker also stops following. This identifies the visible marker holder,
-not a face or a person's appearance.
+The external-camera demo places a robot and movable owner stand in a room, with
+fixed cameras at the back-left and back-right. Both cameras observe owner marker
+**23** and robot marker **24**, and measure the owner's position relative to the
+robot, including its heading. The robot's onboard camera is not used in this room.
 
-Use **four separate container terminals**, in the order below. Stop any existing
-Gazebo world, exploration, teleop, old following launch, and synthetic target
-publisher first. The empty world gives the marker demo room to move and turn.
-
-**Terminal 1 — start the empty world and robot:**
+Stop previous Gazebo, exploration, teleop, and following processes first. Use four container terminals:
 
 ```bash
+# Terminal 1: room, both cameras, tagged robot and owner stand
 cd ~/turtlebot3_ws/src/Embodied_Intelligence_Project
 LIBGL_ALWAYS_SOFTWARE=true GALLIUM_DRIVER=llvmpipe \
-  bash scripts/run_ros_experiment.sh world-empty
+  bash scripts/run_ros_experiment.sh world-room
 ```
 
-Wait for the robot and leave Gazebo unpaused. The rendering variables retain the
-software-rendering workaround used for the D3D12 GUI crash.
-
-**Terminal 2 — start camera tracking, the controller, and the guard:**
-
 ```bash
+# Terminal 2: external-camera tracking, controller and guard (dry run)
 cd ~/turtlebot3_ws/src/Embodied_Intelligence_Project
 source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1
-ros2 launch ./launch/follow.launch.py tracker:=true
+ros2 launch ./launch/room_follow.launch.py
 ```
 
-This starts a dry run: the robot stays stationary and guarded commands go to
-`/following/safe_cmd_vel`. Tracking waits for the marker created in Terminal 4.
-
-**Terminal 3 — watch the measured owner position:**
-
 ```bash
+# Terminal 3: measured relative owner position (initially x near 2, y near 0)
 source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1
 ros2 topic echo /owner/relative_position
 ```
 
-**Terminal 4 — create the visible marker board:**
+Confirm Terminal 2 reports tracking, then Ctrl+C there and restart it to enable
+simulation movement:
 
 ```bash
+ros2 launch ./launch/room_follow.launch.py drive:=true
+```
+
+```bash
+# Terminal 4: move the visible owner stand through the room
 cd ~/turtlebot3_ws/src/Embodied_Intelligence_Project
 source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1
-python3 scripts/owner_marker_target.py spawn --distance 1.5
+python3 scripts/room_target.py move --x 1.5 --y 0.5 --duration 5
 ```
 
-The command finishes, leaving a marker board 1.5 m ahead of the robot. Terminal 2
-should report `tracking owner`; Terminal 3 should show approximately x=1.5, y=0,
-z=0.2 metres. These values come from the camera, not a synthetic position publisher.
+The cameras measure the moving stand; its position is not supplied directly to
+the follower. The robot should follow and maintain roughly 1.0–1.1 m distance
+when there is clearance. In Terminal 4, run `python3 scripts/room_target.py remove`
+to check that loss of the owner stops the robot. Use
+`python3 scripts/room_target.py spawn --x 1.5 --y 0.5` to recreate it.
 
-**Enable movement after confirming detection:** press Ctrl+C in **Terminal 2**,
-then restart it with:
-
-```bash
-ros2 launch ./launch/follow.launch.py tracker:=true drive:=true
-```
-
-The robot should approach the board and stop at its following distance. Select
-`owner_marker` in Gazebo and move it slowly with the move tool, keeping the marker
-face toward the camera and its centre near 0.2 m high. The robot follows the
-measured position when there is clearance. It stops for obstacles; it does not
-plan a path around them or search after losing the owner.
-
-The [full owner-tracking guide](docs/OWNER_TRACKING.md) includes the camera viewer,
-wrong-ID tests, and troubleshooting. Settings are in
-[`config/owner_tracking.yaml`](config/owner_tracking.yaml). The
-[printable marker](assets/owner_marker_23.svg) is 200 mm square including its white
-border: print at 100% scale and verify that the **black square measures 150 mm**.
+The [full room-camera guide](docs/ROOM_FOLLOWING.md) covers both camera viewers,
+marker sizes, settings, camera handover and tests.
 
 ## Guides and code
 
 - [Simulation setup and checklist](docs/SIMULATION.md): installation, running, inspection, saving, shutdown, and common failures.
 - [Autonomous exploration guide](docs/EXPLORATION.md): install, run, pause, metrics, settings, and common failures.
-- [Owner marker tracking](docs/OWNER_TRACKING.md): camera-based owner position, printable marker, and guarded following in Gazebo.
+- [Two fixed room cameras](docs/ROOM_FOLLOWING.md): external-camera owner/robot tracking, room demo, and target movement.
 - [Physical robot checklist](docs/ROBOT.md): hardware inventory, SSH, ROS connectivity, supervised movement, and optional mapping.
 - [Hold-to-drive controller](scripts/game_teleop.py): keyboard press/release handling and stop commands.
 - [Simulation launcher](scripts/run_ros_experiment.sh): shared environment and commands.

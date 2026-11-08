@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Follow measured/synthetic owner positions, routing commands through the guard."""
+"""Follow measured owner positions, routing commands through the LiDAR guard."""
 
 import math
 import signal
