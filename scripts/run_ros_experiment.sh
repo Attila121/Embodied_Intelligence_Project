@@ -80,6 +80,7 @@ case "${1:-check}" in
     printf '\nDone. Open a NEW terminal, then run: bash scripts/run_ros_experiment.sh check\n'
     ;;
   world) exec ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py ;;
+  world-empty) exec ros2 launch turtlebot3_gazebo empty_world.launch.py ;;
   world-house) exec ros2 launch turtlebot3_gazebo turtlebot3_house.launch.py ;;
   rviz) exec rviz2 --ros-args -p use_sim_time:=true ;;
   teleop) exec python3 "$PROJECT_DIR/scripts/game_teleop.py" ;;
@@ -118,7 +119,7 @@ case "${1:-check}" in
       --ros-args -p use_sim_time:=true -p save_map_timeout:=10.0
     ;;
   *)
-    printf 'Usage: bash scripts/run_ros_experiment.sh {check|world|world-house|rviz|teleop|teleop-classic|slam|topics|save}\n' >&2
+    printf 'Usage: bash scripts/run_ros_experiment.sh {check|world|world-empty|world-house|rviz|teleop|teleop-classic|slam|topics|save}\n' >&2
     printf '       exploration: {setup-explore|explore|explore-stop|explore-resume|metrics|save-explore}\n' >&2
     exit 2
     ;;
