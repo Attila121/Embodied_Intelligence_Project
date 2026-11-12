@@ -15,3 +15,8 @@ recordings/
 .idea/
 .DS_Store
 Thumbs.db
+rig/rig.env
+rig/assets/**
+!rig/assets/README.md
+!rig/assets/*/
+!rig/assets/*/.gitkeep

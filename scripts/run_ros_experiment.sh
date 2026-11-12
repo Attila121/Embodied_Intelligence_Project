@@ -81,6 +81,7 @@ case "${1:-check}" in
     ;;
   world) exec ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py ;;
   world-room) exec ros2 launch "$PROJECT_DIR/launch/room_world.launch.py" "${@:2}" ;;
+  follow-demo) exec bash "$PROJECT_DIR/scripts/follow_demo.sh" "${@:2}" ;;
   world-house) exec ros2 launch turtlebot3_gazebo turtlebot3_house.launch.py ;;
   rviz) exec rviz2 --ros-args -p use_sim_time:=true ;;
   teleop) exec python3 "$PROJECT_DIR/scripts/game_teleop.py" ;;
@@ -120,6 +121,7 @@ case "${1:-check}" in
     ;;
   *)
     printf 'Usage: bash scripts/run_ros_experiment.sh {check|world|world-room|world-house|rviz|teleop|teleop-classic|slam|topics|save}\n' >&2
+    printf '       following: {world-room|follow-demo [--headless] [--no-walk] [--obstacles] [--owner-speed M/S]}\n' >&2
     printf '       exploration: {setup-explore|explore|explore-stop|explore-resume|metrics|save-explore}\n' >&2
     exit 2
     ;;

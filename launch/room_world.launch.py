@@ -17,6 +17,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"scripts"))
+from room_obstacles import OBSTACLES
 from room_scene import build_room
 
 
@@ -25,7 +26,11 @@ def world_actions(context):
     tb3 = Path(get_package_share_directory("turtlebot3_gazebo"))
     directory = Path(tempfile.mkdtemp(prefix="two-camera-room-"))
     world = directory/"room.world"
-    world.write_text(build_room(tb3/"models/turtlebot3_waffle_pi/model.sdf"))
+    obstacles = LaunchConfiguration("obstacles").perform(context).lower()
+    if obstacles not in {"true", "false"}:
+        raise ValueError("obstacles must be true or false")
+    world.write_text(build_room(tb3/"models/turtlebot3_waffle_pi/model.sdf",
+                                obstacles=OBSTACLES if obstacles == "true" else ()))
 
     def cleanup(_context):
         shutil.rmtree(directory, ignore_errors=True)
@@ -50,5 +55,7 @@ def world_actions(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("gui", default_value="true"),
+        DeclareLaunchArgument("obstacles", default_value="false",
+                              description="Add the low floor obstacles from room_obstacles.py"),
         OpaqueFunction(function=world_actions),
     ])

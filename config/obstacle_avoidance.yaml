@@ -1,0 +1,17 @@
+# Defaults mirror scripts/avoidance.py (AvoidParams); edits apply at startup.
+# The speed limits cannot exceed the guard's (0.12 m/s, 0.5 rad/s) and clearance must stay
+# above the guard's 0.55 m all-around turning limit, or validation refuses to start.
+/**/obstacle_avoider:
+  ros__parameters:
+    following_distance: 1.0   # keep equal to the follower's following_distance
+    max_linear: 0.12
+    max_angular: 0.5
+    lookahead: 1.6
+    clearance: 0.62
+    plan_margin: 0.08
+    engage_radius: 0.80
+    owner_exclusion_radius: 0.35
+    sensor_offset_x: -0.064   # Waffle Pi LiDAR offset from base_footprint
+    command_timeout: 0.3
+    owner_timeout: 0.5
+    scan_timeout: 0.6

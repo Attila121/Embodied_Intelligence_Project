@@ -6,6 +6,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from owner_marker import marker_cells
+from room_obstacles import OBSTACLES, OBSTACLE_HEIGHT, obstacle_distance  # noqa: F401
 
 OWNER_ID, ROBOT_ID = 23, 24
 OWNER_SIZE, ROBOT_SIZE = 0.30, 0.24
@@ -36,6 +37,40 @@ def box(link, name, size, pose, color, collision=False):
         element(shape, "pose", " ".join(map(str, pose)))
         geometry = element(shape, "geometry")
         element(element(geometry, "box"), "size", " ".join(map(str, size)))
+
+
+def cylinder(link, name, radius, length, pose, color, collision=False):
+    visual = element(link, "visual", name=name)
+    element(visual, "pose", " ".join(map(str, pose)))
+    geometry = element(visual, "geometry")
+    shape = element(geometry, "cylinder")
+    element(shape, "radius", radius)
+    element(shape, "length", length)
+    material = element(visual, "material")
+    script = element(material, "script")
+    element(script, "uri", "file://media/materials/scripts/gazebo.material")
+    element(script, "name", f"Gazebo/{color}")
+    element(visual, "cast_shadows", "false")
+    if collision:
+        body = element(link, "collision", name=name+"_collision")
+        element(body, "pose", " ".join(map(str, pose)))
+        geometry = element(body, "geometry")
+        shape = element(geometry, "cylinder")
+        element(shape, "radius", radius)
+        element(shape, "length", length)
+
+
+def obstacle_model(spec):
+    model = ET.Element("model", name=spec["name"])
+    element(model, "static", "true")
+    element(model, "pose", f"{spec['x']} {spec['y']} 0 0 0 0")
+    link = element(model, "link", name="body")
+    centre = (0, 0, OBSTACLE_HEIGHT/2, 0, 0, 0)
+    if spec["shape"] == "cylinder":
+        cylinder(link, "body", spec["radius"], OBSTACLE_HEIGHT, centre, spec["color"], collision=True)
+    else:
+        box(link, "body", (*spec["size"], OBSTACLE_HEIGHT), centre, spec["color"], collision=True)
+    return model
 
 
 def top_marker(link, marker_id, size, origin):
@@ -97,7 +132,7 @@ def add_camera(world, name, position, width=1280, height=960):
     element(plugin, "frame_name", f"room_camera_{name}_optical")
 
 
-def build_room(model_path, include_owner=True):
+def build_room(model_path, include_owner=True, obstacles=()):
     root = ET.Element("sdf", version="1.6")
     world = element(root, "world", name="room_following")
     physics = element(world, "physics", type="ode")
@@ -148,6 +183,8 @@ def build_room(model_path, include_owner=True):
         owner = owner_model()
         element(owner, "pose", "1 0 0 0 0 0")
         world.append(owner)
+    for spec in obstacles:
+        world.append(obstacle_model(spec))
     state = element(world, "plugin", name="room_state", filename="libgazebo_ros_state.so")
     element(element(state, "ros"), "namespace", "/gazebo")
     element(state, "update_rate", 10)

@@ -119,7 +119,18 @@ fixed cameras at the back-left and back-right. Both cameras observe owner marker
 **23** and robot marker **24**, and measure the owner's position relative to the
 robot, including its heading. The robot's onboard camera is not used in this room.
 
-Stop previous Gazebo, exploration, teleop, and following processes first. Use four container terminals:
+**One command** (starts everything, walks the stand through the room, checks that the
+robot follows and stops, and cleans up on Ctrl+C; see [the demo guide](docs/DEMO.md)):
+
+```bash
+bash scripts/run_ros_experiment.sh follow-demo            # add --headless for no Gazebo window
+bash scripts/run_ros_experiment.sh follow-demo --obstacles  # floor obstacles + obstacle avoidance
+```
+
+With `--obstacles` the robot steers around three low obstacles on the way
+([details and limits](docs/OBSTACLES.md)); the follower and LiDAR guard are unchanged.
+
+The manual procedure below gives finer control. Stop previous Gazebo, exploration, teleop, and following processes first. Use four container terminals:
 
 ```bash
 # Terminal 1: room, both cameras, tagged robot and owner stand
@@ -172,6 +183,11 @@ marker sizes, settings, camera handover and tests.
 - [Simulation setup and checklist](docs/SIMULATION.md): installation, running, inspection, saving, shutdown, and common failures.
 - [Autonomous exploration guide](docs/EXPLORATION.md): install, run, pause, metrics, settings, and common failures.
 - [Two fixed room cameras](docs/ROOM_FOLLOWING.md): external-camera owner/robot tracking, room demo, and target movement.
+- [One-command simulation demo](docs/DEMO.md): `follow-demo` runs the world, follower and a scripted owner walk with stage checks.
+- [Following with obstacles](docs/OBSTACLES.md): `follow-demo --obstacles`, how the avoidance layer works with the LiDAR guard, settings, tests and limits.
+- [Real-camera rig](rig/README.md): drop Haichen's models into `rig/assets/`, then `bash scripts/run_rig.sh --check` and `bash scripts/run_rig.sh` (local dry run; two cameras, human/cap and robot detectors).
+- [Real-world test session](docs/CLASS_TEST.md): what the simulation does not cover and the step-by-step class checklist from asset check to supervised driving.
+- [Human/cap rig bridge](docs/RIG_BRIDGE.md): convert the rig's owner/robot poses into follower inputs; launch with `source:=rig` for a dry run.
 - [Physical robot checklist](docs/ROBOT.md): hardware inventory, SSH, ROS connectivity, supervised movement, and optional mapping.
 - [Hold-to-drive controller](scripts/game_teleop.py): keyboard press/release handling and stop commands.
 - [Simulation launcher](scripts/run_ros_experiment.sh): shared environment and commands.

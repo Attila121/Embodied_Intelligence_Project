@@ -6,7 +6,8 @@ import unittest
 import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"scripts"))
-from room_scene import OWNER_ID, ROBOT_ID, owner_sdf, top_marker
+from room_obstacles import OBSTACLES, OBSTACLE_HEIGHT
+from room_scene import OWNER_ID, ROBOT_ID, obstacle_model, owner_sdf, top_marker
 
 
 class RoomSceneTests(unittest.TestCase):
@@ -26,6 +27,26 @@ class RoomSceneTests(unittest.TestCase):
         self.assertEqual(root.find("model").attrib["name"], "room_owner")
         self.assertEqual(root.findtext("model/static"), "true")
         self.assertEqual(len(root.findall("model/link/visual")), 66)
+
+    def test_obstacle_models_are_static_collidable_and_low(self):
+        for spec in OBSTACLES:
+            model = obstacle_model(spec)
+            self.assertEqual(model.attrib["name"], spec["name"])
+            self.assertEqual(model.findtext("static"), "true")
+            self.assertEqual(len(model.findall("link/collision")), 1)
+            self.assertEqual(len(model.findall("link/visual")), 1)
+            x, y, *_ = map(float, model.findtext("pose").split())
+            self.assertEqual((x, y), (spec["x"], spec["y"]))
+            _, _, z, *_ = map(float, model.findtext("link/visual/pose").split())
+            self.assertAlmostEqual(z, OBSTACLE_HEIGHT / 2)       # sits on the floor
+            if spec["shape"] == "cylinder":
+                self.assertAlmostEqual(float(model.findtext("link/collision/geometry/cylinder/radius")),
+                                       spec["radius"])
+                self.assertAlmostEqual(float(model.findtext("link/collision/geometry/cylinder/length")),
+                                       OBSTACLE_HEIGHT)
+            else:
+                size = list(map(float, model.findtext("link/collision/geometry/box/size").split()))
+                self.assertEqual(size, [*spec["size"], OBSTACLE_HEIGHT])
 
 
 if __name__ == "__main__":

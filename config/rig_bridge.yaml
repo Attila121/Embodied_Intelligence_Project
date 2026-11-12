@@ -1,0 +1,18 @@
+/**/rig_bridge:
+  ros__parameters:
+    use_sim_time: false
+    owner_topic: /owner_position
+    robot_topic: /robot_position
+    # Measure the same physical rectangle used by BOTH publisher homographies.
+    plane_width_m: 3.60
+    plane_height_m: 2.25
+    field_margin_m: 0.10
+    robot_heading_offset_rad: 0.0  # Calibrate forward; often 0 or pi.
+    owner_timeout: 0.5
+    robot_timeout: 0.5
+    publish_rate: 10.0
+    # Off until marker height, camera height and camera floor projection are measured.
+    robot_marker_height_m: 0.0
+    robot_camera_height_m: 0.0
+    robot_camera_foot_x_m: 0.0
+    robot_camera_foot_y_m: 0.0
